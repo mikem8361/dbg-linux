@@ -23,7 +23,6 @@
 #define __RPC_USER
 #define __RPC_FAR
 
-typedef GUID IID;
 typedef void *LPSECURITY_ATTRIBUTES;
 
 #define DECLSPEC_UUID(x) __declspec(uuid(x))

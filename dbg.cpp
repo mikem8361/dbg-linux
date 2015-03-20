@@ -7,6 +7,7 @@
 #include "no_sal2.h"
 #include "pal_mstypes.h"
 #include "cordebug.h"
+#include "managed_callback.h"
 
 
 #define DLL_PROCESS_ATTACH 1
@@ -15,7 +16,7 @@ typedef BOOL (*DllMain)(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved);
 
 void *load_lib(const char *name)
 {
-    void *lib = dlopen(name, RTLD_LAZY | RTLD_GLOBAL);
+    void *lib = dlopen(name, RTLD_LAZY);
     if (lib == nullptr) 
     {
         printf("Can't load library %s\n", name);
@@ -34,6 +35,7 @@ void *load_lib(const char *name)
         printf("DllMain for %s returned FALSE\n", name);
         return nullptr;
     }
+    printf("Library loaded %s\n", name);
 
     return lib;
 }
@@ -42,7 +44,7 @@ int main(int argc, const char **args)
 {
     printf("Hi, I'm a process %d\n", getpid());
 
-    void *dac_lib = load_lib("libmscordaccore.so");
+    //void *dac_lib = load_lib("libmscordaccore.so");
     void *dbi_lib = load_lib("libmscordbi.so");
 
     CreateCordbObject createCordbObject = (CreateCordbObject)dlsym(dbi_lib, "CreateCordbObject");
@@ -59,11 +61,31 @@ int main(int argc, const char **args)
     ICorDebug *pCordb;
     HRESULT hr = createCordbObject(3, &pCordb);
 
-    printf("Cordebug created hr=%d pCordb=%p\n", (int)hr, pCordb);
+    printf("Cordebug created hr=%X pCordb=%p\n", (int)hr, pCordb);
 
     hr = pCordb->Initialize();
-    printf("Cordebug initialized hr=%d\n", (int)hr);
+    printf("Cordebug initialized hr=%X\n", (int)hr);
 
+    ManagedCallback *callback = new ManagedCallback();
+    hr = pCordb->SetManagedHandler(callback);
+    printf("SetManagedHandler hr=%X\n", (int)hr);
+
+/*
+    pCordb->CreateProcess( 
+             LPCWSTR lpApplicationName,
+             LPWSTR lpCommandLine,
+             LPSECURITY_ATTRIBUTES lpProcessAttributes,
+             LPSECURITY_ATTRIBUTES lpThreadAttributes,
+             BOOL bInheritHandles,
+             DWORD dwCreationFlags,
+             PVOID lpEnvironment,
+             LPCWSTR lpCurrentDirectory,
+             LPSTARTUPINFOW lpStartupInfo,
+             LPPROCESS_INFORMATION lpProcessInformation,
+             CorDebugCreateProcessFlags debuggingFlags,
+             ICorDebugProcess **ppProcess) = 0;
+*/
+    printf("<press any key>");
     getchar();
 
     return 0;
