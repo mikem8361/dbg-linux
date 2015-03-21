@@ -1174,10 +1174,6 @@ typedef SIZE_T PCCOR_SIGNATURE;
 
 typedef SIZE_T LPDEBUG_EVENT;
 
-typedef SIZE_T LPSTARTUPINFOW;
-
-typedef SIZE_T LPPROCESS_INFORMATION;
-
 typedef const void *LPCVOID;
 
 //#endif if 0

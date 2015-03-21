@@ -5,6 +5,7 @@
 #include <string.h>
 //#include <stdint.h>
 #include "no_sal2.h"
+#include "pal_char16.h"
 #include "pal_mstypes.h"
 #include "cordebug.h"
 #include "managed_callback.h"
@@ -70,21 +71,27 @@ int main(int argc, const char **args)
     hr = pCordb->SetManagedHandler(callback);
     printf("SetManagedHandler hr=%X\n", (int)hr);
 
-/*
+    STARTUPINFOW si = {0};
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+
+    PROCESS_INFORMATION pi = {0};
+
+    ICorDebugProcess *process;
     pCordb->CreateProcess( 
-             LPCWSTR lpApplicationName,
-             LPWSTR lpCommandLine,
-             LPSECURITY_ATTRIBUTES lpProcessAttributes,
-             LPSECURITY_ATTRIBUTES lpThreadAttributes,
-             BOOL bInheritHandles,
-             DWORD dwCreationFlags,
-             PVOID lpEnvironment,
-             LPCWSTR lpCurrentDirectory,
-             LPSTARTUPINFOW lpStartupInfo,
-             LPPROCESS_INFORMATION lpProcessInformation,
-             CorDebugCreateProcessFlags debuggingFlags,
-             ICorDebugProcess **ppProcess) = 0;
-*/
+             NULL,
+             (LPWSTR)u"/home/eugene/projects/coreclr/binaries/Product/linux.x64.debug/corerun HelloWorld.exe",
+             NULL,
+             NULL,
+             FALSE,
+             0,
+             NULL,
+             NULL,
+             &si,
+             &pi,
+             DEBUG_NO_SPECIAL_OPTIONS,
+             &process);
+
     printf("<press any key>");
     getchar();
 
