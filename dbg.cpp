@@ -3,7 +3,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <string.h>
-//#include <stdint.h>
+#include <stdlib.h>
 #include "no_sal2.h"
 #include "pal_char16.h"
 #include "pal_mstypes.h"
@@ -45,7 +45,7 @@ int main(int argc, const char **args)
 {
     printf("Hi, I'm a process %d\n", getpid());
 
-    //void *dac_lib = load_lib("libmscordaccore.so");
+    void *dac_lib = load_lib("libmscordaccore.so");
     void *dbi_lib = load_lib("libmscordbi.so");
 
     CreateCordbObject createCordbObject = (CreateCordbObject)dlsym(dbi_lib, "CreateCordbObject");
@@ -71,26 +71,36 @@ int main(int argc, const char **args)
     hr = pCordb->SetManagedHandler(callback);
     printf("SetManagedHandler hr=%X\n", (int)hr);
 
-    STARTUPINFOW si = {0};
-    si.cb = sizeof(si);
-    si.dwFlags = STARTF_USESTDHANDLES;
+    ICorDebugProcess *process = nullptr;
+    if (argc > 1) 
+    {
+        int pid = atoi(args[1]);
+        printf("Attaching to pid %d\n", pid);
+        hr = pCordb->DebugActiveProcess((DWORD)pid, FALSE, &process);
+        printf("DebugActiveProcess hr=%X\n", (int)hr);
+    }
+    else 
+    {
+        STARTUPINFOW si = {0};
+        si.cb = sizeof(si);
+        si.dwFlags = 0;
 
-    PROCESS_INFORMATION pi = {0};
-
-    ICorDebugProcess *process;
-    pCordb->CreateProcess( 
-             NULL,
-             (LPWSTR)u"/home/eugene/projects/coreclr/binaries/Product/linux.x64.debug/corerun HelloWorld.exe",
-             NULL,
-             NULL,
-             FALSE,
-             0,
-             NULL,
-             NULL,
-             &si,
-             &pi,
-             DEBUG_NO_SPECIAL_OPTIONS,
-             &process);
+        PROCESS_INFORMATION pi = {0};
+        hr = pCordb->CreateProcess( 
+                 NULL,
+                 (LPWSTR)u"/home/eugene/projects/coreclr/binaries/Product/linux.x64.debug/corerun /home/eugene/projects/coreclr/binaries/Product/linux.x64.debug/HelloWorld.exe",
+                 NULL,
+                 NULL,
+                 FALSE,
+                 0,
+                 NULL,
+                 NULL,
+                 &si,
+                 &pi,
+                 DEBUG_NO_SPECIAL_OPTIONS,
+                 &process);
+        printf("CreateProcess hr=%X\n", (int)hr);
+    }
 
     printf("<press any key>");
     getchar();
