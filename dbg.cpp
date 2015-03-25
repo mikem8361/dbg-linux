@@ -15,10 +15,13 @@
 typedef HRESULT (*CreateCordbObject)(int iDebuggerVersion, ICorDebug **ppCordb);
 typedef BOOL (*DllMain)(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved);
 typedef int (*PAL_Initialize)(int argc, const char *);
+typedef HMODULE (*LoadLibraryA)(LPCSTR lpLibFileName);
+typedef void *(*GetProcAddress) (HMODULE hModule, LPCSTR lpProcName);
 
-void *load_lib(const char *name)
+void *load_pal()
 {
-    void *lib = dlopen(name, RTLD_LAZY);
+    const char *name = "libdynamic_pal.so";
+    void *lib = dlopen(name, RTLD_LAZY | RTLD_GLOBAL);
     if (lib == nullptr) 
     {
         printf("Can't load library %s\n", name);
@@ -39,34 +42,24 @@ void *load_lib(const char *name)
         return nullptr;        
     }
 
-    DllMain dllMainProc = (DllMain)dlsym(lib, "DllMain");
-    if (dllMainProc == nullptr) 
-    {
-        printf("Can't find DllMain in library %s\n", name);
-        return nullptr;
-    }
-    
-    if (!dllMainProc(lib, DLL_PROCESS_ATTACH, nullptr))
-    {
-        printf("DllMain for %s returned FALSE\n", name);
-        return nullptr;
-    }
-    printf("Library loaded %s\n", name);
-
-    return lib;
+    return lib;   
 }
+
 
 int main(int argc, const char **args)
 {
     printf("Hi, I'm a process %d\n", getpid());
 
-    //void *dac_lib = load_lib("libmscordaccore.so");
-    void *dbi_lib = load_lib("libmscordbi.so");
+    void *palLib = load_pal();
+    LoadLibraryA loadLibraryA = (LoadLibraryA)dlsym(palLib, "LoadLibraryA");
+    GetProcAddress getProcAddress = (GetProcAddress)dlsym(palLib, "GetProcAddress");
 
-    CreateCordbObject createCordbObject = (CreateCordbObject)dlsym(dbi_lib, "CreateCordbObject");
+    HMODULE dbi_lib = loadLibraryA("libmscordbi.so");
+
+    CreateCordbObject createCordbObject = (CreateCordbObject)getProcAddress(dbi_lib, "CreateCordbObject");
     if (createCordbObject == nullptr) 
     {
-        printf("Bummer\n");
+        printf("createCordbObject == nullptr\n");
         return 1;
     }
     else
