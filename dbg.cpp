@@ -14,6 +14,7 @@
 #define DLL_PROCESS_ATTACH 1
 typedef HRESULT (*CreateCordbObject)(int iDebuggerVersion, ICorDebug **ppCordb);
 typedef BOOL (*DllMain)(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved);
+typedef int (*PAL_Initialize)(int argc, const char *);
 
 void *load_lib(const char *name)
 {
@@ -22,6 +23,20 @@ void *load_lib(const char *name)
     {
         printf("Can't load library %s\n", name);
         return nullptr;
+    }
+
+    PAL_Initialize palInit = (PAL_Initialize)dlsym(lib, "PAL_Initialize");
+    if (palInit == nullptr) 
+    {
+        printf("Can't find PAL_Initialize in library %s\n", name);
+        return nullptr;
+    }
+
+    int palInitResult = palInit(0, nullptr);
+    if (palInitResult != 0)
+    {
+        printf("PAL_Initialize returned error %d\n", palInitResult);
+        return nullptr;        
     }
 
     DllMain dllMainProc = (DllMain)dlsym(lib, "DllMain");
@@ -45,7 +60,7 @@ int main(int argc, const char **args)
 {
     printf("Hi, I'm a process %d\n", getpid());
 
-    void *dac_lib = load_lib("libmscordaccore.so");
+    //void *dac_lib = load_lib("libmscordaccore.so");
     void *dbi_lib = load_lib("libmscordbi.so");
 
     CreateCordbObject createCordbObject = (CreateCordbObject)dlsym(dbi_lib, "CreateCordbObject");
