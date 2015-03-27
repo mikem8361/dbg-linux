@@ -20,7 +20,7 @@ typedef void *(*GetProcAddress) (HMODULE hModule, LPCSTR lpProcName);
 
 void *load_pal()
 {
-    const char *name = "libdynamic_pal.so";
+    const char *name = "libmscordaccore.so";
     void *lib = dlopen(name, RTLD_LAZY | RTLD_GLOBAL);
     if (lib == nullptr) 
     {
