@@ -68,7 +68,7 @@ public:
         /* [in] */ ICorDebugBreakpoint *pBreakpoint)
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -79,7 +79,7 @@ public:
         /* [in] */ CorDebugStepReason reason)    
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -88,7 +88,7 @@ public:
         /* [in] */ ICorDebugThread *thread)    
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -98,7 +98,7 @@ public:
         /* [in] */ BOOL unhandled)    
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -141,7 +141,7 @@ public:
         /* [in] */ ICorDebugThread *thread)    
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -150,7 +150,7 @@ public:
         /* [in] */ ICorDebugThread *thread)    
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -163,7 +163,7 @@ public:
         ULONG32 len;
         pModule->GetName(100, &len, name);
         printf("\tModule name: %s\n", to_ascii(name));        
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -172,7 +172,7 @@ public:
         /* [in] */ ICorDebugModule *pModule)    
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -181,7 +181,7 @@ public:
         /* [in] */ ICorDebugClass *c)    
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -190,7 +190,7 @@ public:
         /* [in] */ ICorDebugClass *c)    
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -200,7 +200,7 @@ public:
         /* [in] */ DWORD errorCode)    
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pProcess->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -212,7 +212,7 @@ public:
         /* [in] */ WCHAR *pMessage)    
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -225,7 +225,8 @@ public:
         /* [in] */ WCHAR *pParentName)
         {
             PrintWhereIAm();
-            m_pProcess->Continue(FALSE);  
+            printf("\tSwitch name: %s\n", to_ascii(pLogSwitchName));
+            pAppDomain->Continue(FALSE);  
             return S_OK; 
         }
     
@@ -235,7 +236,7 @@ public:
         {
             PrintWhereIAm(); 
             pAppDomain->Attach();
-            m_pProcess->Continue(FALSE); 
+            pAppDomain->Continue(FALSE); 
             return S_OK; 
         }
     
@@ -244,7 +245,7 @@ public:
         /* [in] */ ICorDebugAppDomain *pAppDomain)
         {
             PrintWhereIAm(); 
-            m_pProcess->Continue(FALSE); 
+            pAppDomain->Continue(FALSE); 
             return S_OK; 
         }
     
@@ -257,7 +258,7 @@ public:
         ULONG32 len;
         pAssembly->GetName(100, &len, name);
         printf("\tAssembly name: %s\n", to_ascii(name));
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -266,7 +267,7 @@ public:
         /* [in] */ ICorDebugAssembly *pAssembly)
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -274,7 +275,7 @@ public:
         /* [in] */ ICorDebugProcess *pProcess)
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pProcess->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -283,7 +284,7 @@ public:
         /* [in] */ ICorDebugThread *pThread)
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -293,7 +294,7 @@ public:
         /* [in] */ IStream *pSymbolStream)
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -336,7 +337,7 @@ public:
         /* [in] */ WCHAR *pConnName)
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pProcess->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -345,7 +346,7 @@ public:
         /* [in] */ CONNID dwConnectionId)
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pProcess->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -354,7 +355,7 @@ public:
         /* [in] */ CONNID dwConnectionId)
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pProcess->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -368,7 +369,7 @@ public:
     {
         PrintWhereIAm();
         printf("\tFlags = %x\n dwEventType=%x", dwFlags, (DWORD)dwEventType);
-        //m_pProcess->Continue(FALSE);  
+        pAppDomain->Continue(FALSE);  
         return S_OK; 
     }
     
@@ -379,7 +380,7 @@ public:
         /* [in] */ DWORD dwFlags)    
     {
         PrintWhereIAm(); 
-        m_pProcess->Continue(FALSE); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
