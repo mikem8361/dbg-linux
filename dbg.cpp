@@ -4,14 +4,16 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
-#define UNALIGNED
 #include "no_sal2.h"
 #include "pal_char16.h"
 #include "pal_mstypes.h"
+#include "rpc.h"
 #include "rt/ntimage.h"
 #include "unknwn.h"
 #include "cor.h"
 #include "cordebug.h"
+
+
 #include "managed_callback.h"
 
 
