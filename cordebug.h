@@ -1149,7 +1149,7 @@ extern "C"{
 /* interface __MIDL_itf_cordebug_0000_0000 */
 /* [local] */ 
 
-//#if 0
+#if 0
 typedef UINT32 mdToken;
 
 typedef mdToken mdModule;
@@ -1168,15 +1168,15 @@ typedef mdToken mdFieldDef;
 
 typedef mdToken mdSignature;
 
-//typedef ULONG CorElementType;
+typedef ULONG CorElementType;
 
-// typedef SIZE_T PCCOR_SIGNATURE;
-
-typedef SIZE_T LPDEBUG_EVENT;
+typedef SIZE_T PCCOR_SIGNATURE;
 
 typedef const void *LPCVOID;
 
-//#endif if 0
+#endif
+
+typedef SIZE_T LPDEBUG_EVENT;
 
 
 typedef /* [wire_marshal] */ void *HPROCESS;
