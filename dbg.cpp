@@ -4,9 +4,13 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#define UNALIGNED
 #include "no_sal2.h"
 #include "pal_char16.h"
 #include "pal_mstypes.h"
+#include "rt/ntimage.h"
+#include "unknwn.h"
+#include "cor.h"
 #include "cordebug.h"
 #include "managed_callback.h"
 
@@ -14,7 +18,8 @@
 #define DLL_PROCESS_ATTACH 1
 typedef HRESULT (*CreateCordbObject)(int iDebuggerVersion, ICorDebug **ppCordb);
 typedef BOOL (*DllMain)(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved);
-typedef int (*PAL_Initialize)(int argc, const char *);
+typedef int (*PAL_InitializeDLL)();
+typedef int (*PAL_Initialize)(int argc, const char * const argv[]);
 typedef HMODULE (*LoadLibraryA)(LPCSTR lpLibFileName);
 typedef void *(*GetProcAddress) (HMODULE hModule, LPCSTR lpProcName);
 
@@ -28,6 +33,7 @@ void *load_pal()
         return nullptr;
     }
 
+    PAL_InitializeDLL palInitDll = (PAL_InitializeDLL)dlsym(lib, "PAL_InitializeDLL");
     PAL_Initialize palInit = (PAL_Initialize)dlsym(lib, "PAL_Initialize");
     if (palInit == nullptr) 
     {
@@ -35,7 +41,7 @@ void *load_pal()
         return nullptr;
     }
 
-    int palInitResult = palInit(0, nullptr);
+    int palInitResult = palInit(0,0);
     if (palInitResult != 0)
     {
         printf("PAL_Initialize returned error %d\n", palInitResult);

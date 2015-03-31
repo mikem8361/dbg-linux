@@ -37,4 +37,8 @@ interface IRpcChannelBuffer;
 typedef void* PRPC_MESSAGE;
 typedef void* RPC_IF_HANDLE;
 
+#define UNALIGNED
+
+struct ITypeInfo;
+
 #endif // __RPC_H__

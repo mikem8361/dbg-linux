@@ -108,6 +108,7 @@ public:
         /* [in] */ ICorDebugEval *pEval)
     { 
         PrintWhereIAm(); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     
@@ -117,6 +118,7 @@ public:
         /* [in] */ ICorDebugEval *pEval)    
     { 
         PrintWhereIAm(); 
+        pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
     

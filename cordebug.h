@@ -1168,9 +1168,9 @@ typedef mdToken mdFieldDef;
 
 typedef mdToken mdSignature;
 
-typedef ULONG CorElementType;
+//typedef ULONG CorElementType;
 
-typedef SIZE_T PCCOR_SIGNATURE;
+// typedef SIZE_T PCCOR_SIGNATURE;
 
 typedef SIZE_T LPDEBUG_EVENT;
 
