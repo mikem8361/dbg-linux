@@ -1,17 +1,6 @@
 #define MIDL_DEFINE_GUID(type,name,l,w1,w2,b1,b2,b3,b4,b5,b6,b7,b8) \
         const type name = {l,w1,w2,{b1,b2,b3,b4,b5,b6,b7,b8}}
 
-char *to_ascii(char16_t *src)
-{
-    char *result = (char *)src;
-    char *dst = result;
-    while (*src)
-    {
-        *dst++ = (char)*src++;
-    }
-    *dst = 0;
-    return result;
-}
 
 
 MIDL_DEFINE_GUID(IID, IID_ICorDebugManagedCallback,0x3d6f5f60,0x7538,0x11d3,0x8d,0x5b,0x00,0x10,0x4b,0x35,0xe7,0xef);
@@ -164,7 +153,8 @@ public:
         WCHAR name[100];
         ULONG32 len;
         pModule->GetName(100, &len, name);
-        printf("\tModule name: %s\n", to_ascii(name));        
+        printf("\tModule name: %s\n", to_ascii(name)); 
+        enum_types(pModule);
         pAppDomain->Continue(FALSE); 
         return S_OK; 
     }

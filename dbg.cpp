@@ -13,8 +13,22 @@
 #include "cor.h"
 #include "cordebug.h"
 
+char *to_ascii(char16_t *src)
+{
+    char *result = (char *)src;
+    char *dst = result;
+    while (*src)
+    {
+        *dst++ = (char)*src++;
+    }
+    *dst = 0;
+    return result;
+}
 
+
+#include "metadata.h"
 #include "managed_callback.h"
+
 
 
 #define DLL_PROCESS_ATTACH 1
@@ -104,7 +118,7 @@ int main(int argc, const char **args)
         PROCESS_INFORMATION pi = {0};
         hr = pCordb->CreateProcess( 
                  NULL,
-                 (LPWSTR)u"/home/eugene/projects/coreclr/binaries/Product/linux.x64.debug/corerun /home/eugene/projects/coreclr/binaries/Product/linux.x64.debug/HelloWorld.exe",
+                 (LPWSTR)u"/home/eugene/projects/coreclr/binaries/Product/linux.x64.debug/corerun /home/eugene/projects/coreclr/binaries/Product/linux.x64.debug/Hello.exe",
                  NULL,
                  NULL,
                  FALSE,
