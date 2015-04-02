@@ -11,6 +11,10 @@ MIDL_DEFINE_GUID(IID, IID_ICorDebugManagedCallback3,0x264EA0FC,0x2591,0x49AA,0x8
 
 MIDL_DEFINE_GUID(IID, IID_ICorDebugManagedCallback2,0x250E5EEA,0xDB5C,0x4C76,0xB6,0xF3,0x8C,0x46,0xF1,0x2E,0x32,0x03);
 
+MIDL_DEFINE_GUID(IID, IID_ICorDebugFunctionBreakpoint,0xCC7BCAE9,0x8A68,0x11d2,0x98,0x3C,0x00,0x00,0xF8,0x08,0x34,0x2D);
+
+MIDL_DEFINE_GUID(IID, IID_ICorDebugILFrame4,0xAD914A30,0xC6D1,0x4AC5,0x9C,0x5E,0x57,0x7F,0x3B,0xAA,0x8A,0x45);
+
 #define DebugBreak() asm("int 3");
 #define PrintWhereIAm() printf("Callback called: %s\n", __func__);
 
@@ -56,7 +60,13 @@ public:
         /* [in] */ ICorDebugThread *pThread,
         /* [in] */ ICorDebugBreakpoint *pBreakpoint)
     {
-        PrintWhereIAm(); 
+        ICorDebugFunctionBreakpoint *fbp = NULL;
+        pBreakpoint->QueryInterface(IID_ICorDebugFunctionBreakpoint, (void**)&fbp);
+        ICorDebugFunction *function = NULL;
+        fbp->GetFunction(&function);
+        printf("Breakpoint at \n");
+        print_callstack(pThread);
+
         pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
@@ -87,6 +97,7 @@ public:
         /* [in] */ BOOL unhandled)    
     {
         PrintWhereIAm(); 
+        print_callstack(pThread);
         pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
@@ -152,9 +163,14 @@ public:
         PrintWhereIAm(); 
         WCHAR name[100];
         ULONG32 len;
+        pModule->EnableJITDebugging(TRUE, FALSE);
         pModule->GetName(100, &len, name);
         printf("\tModule name: %s\n", to_ascii(name)); 
-        enum_types(pModule);
+        if (strstr((const char *)name, "mscorlib") == NULL)
+        {
+            enum_types(pModule);
+            pModule->EnableClassLoadCallbacks(TRUE);
+        }
         pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
@@ -173,6 +189,9 @@ public:
         /* [in] */ ICorDebugClass *c)    
     {
         PrintWhereIAm(); 
+        printf("\tclass: ");
+        print_class(c);
+        printf("\n");
         pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
@@ -182,6 +201,9 @@ public:
         /* [in] */ ICorDebugClass *c)    
     {
         PrintWhereIAm(); 
+        printf("\tclass");
+        print_class(c);
+        printf("\n");        
         pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
@@ -361,6 +383,7 @@ public:
     {
         PrintWhereIAm();
         printf("\tFlags = %x\n dwEventType=%x", dwFlags, (DWORD)dwEventType);
+        print_callstack(pThread);
         pAppDomain->Continue(FALSE);  
         return S_OK; 
     }
