@@ -15,6 +15,8 @@ MIDL_DEFINE_GUID(IID, IID_ICorDebugFunctionBreakpoint,0xCC7BCAE9,0x8A68,0x11d2,0
 
 MIDL_DEFINE_GUID(IID, IID_ICorDebugILFrame4,0xAD914A30,0xC6D1,0x4AC5,0x9C,0x5E,0x57,0x7F,0x3B,0xAA,0x8A,0x45);
 
+MIDL_DEFINE_GUID(IID, IID_ICorDebugAssembly2,0x426d1f9e,0x6dd4,0x44c8,0xae,0xc7,0x26,0xcd,0xba,0xf4,0xe3,0x98);
+
 #define DebugBreak() asm("int 3");
 #define PrintWhereIAm() printf("Callback called: %s\n", __func__);
 
@@ -268,6 +270,12 @@ public:
         /* [in] */ ICorDebugAssembly *pAssembly)    
     {
         PrintWhereIAm(); 
+        {
+            BOOL t;
+            ICorDebugAssembly2 *a2;
+            pAssembly->QueryInterface(IID_ICorDebugAssembly2, (void **)&a2);
+            a2->IsFullyTrusted(&t);
+        }
         WCHAR name[100];
         ULONG32 len;
         pAssembly->GetName(100, &len, name);

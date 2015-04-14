@@ -1,4 +1,4 @@
-export LD_LIBRARY_PATH=/home/eugene/projects/coreclr/binaries/Product/linux.x64.debug
+export LD_LIBRARY_PATH=/home/eugene/projects/coreclr/bin/Product/Linux.x64.Debug
 export COMPlus_DbgWaitForDebuggerAttach=1
 #export COMPlus_LogEnable="1"
 #export COMPlus_LogFacility="200"
