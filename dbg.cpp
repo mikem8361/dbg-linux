@@ -36,12 +36,13 @@ typedef HRESULT (*CreateCordbObject)(int iDebuggerVersion, ICorDebug **ppCordb);
 typedef BOOL (*DllMain)(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved);
 typedef int (*PAL_InitializeDLL)();
 typedef int (*PAL_Initialize)(int argc, const char * const argv[]);
+typedef int (*PAL_InitializeCoreCLR)(const char *szExePath, const char *szCoreCLRPath, BOOL fStayInPAL);
 typedef HMODULE (*LoadLibraryA)(LPCSTR lpLibFileName);
 typedef void *(*GetProcAddress) (HMODULE hModule, LPCSTR lpProcName);
 
 void *load_pal()
 {
-    const char *name = "libmscordaccore.so";
+    const char *name = "libcoreclrpal.so";
     void *lib = dlopen(name, RTLD_LAZY | RTLD_GLOBAL);
     if (lib == nullptr) 
     {
@@ -51,18 +52,26 @@ void *load_pal()
 
     PAL_InitializeDLL palInitDll = (PAL_InitializeDLL)dlsym(lib, "PAL_InitializeDLL");
     PAL_Initialize palInit = (PAL_Initialize)dlsym(lib, "PAL_Initialize");
+    PAL_InitializeCoreCLR palInitCoreClr = (PAL_InitializeCoreCLR)dlsym(lib, "PAL_InitializeCoreCLR");
     if (palInit == nullptr) 
     {
         printf("Can't find PAL_Initialize in library %s\n", name);
         return nullptr;
     }
 
-    int palInitResult = palInit(0,0);
+    int palInitResult = palInit(0, 0);
     if (palInitResult != 0)
     {
         printf("PAL_Initialize returned error %d\n", palInitResult);
         return nullptr;        
     }
+
+    /*
+    if (palInitCoreClr("dbg", "/home/eugene/projects/coreclr/bin/Product/Linux.x64.Debug/libcoreclr.so", TRUE) == 0) 
+    {
+        printf("Can't find PAL_InitializeCoreCLR in library %s\n", name);
+        return nullptr;
+    }*/
 
     return lib;   
 }
@@ -118,7 +127,7 @@ int main(int argc, const char **args)
         PROCESS_INFORMATION pi = {0};
         hr = pCordb->CreateProcess( 
                  NULL,
-                 (LPWSTR)u"/home/eugene/projects/coreclr/binaries/Product/linux.x64.debug/corerun /home/eugene/projects/coreclr/binaries/Product/linux.x64.debug/Hello.exe",
+                 (LPWSTR)u"/home/eugene/projects/coreclr/bin/Product/Linux.x64.Debug/corerun Hello.exe",
                  NULL,
                  NULL,
                  FALSE,
