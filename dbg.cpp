@@ -39,6 +39,8 @@ typedef int (*PAL_Initialize)(int argc, const char * const argv[]);
 typedef int (*PAL_InitializeCoreCLR)(const char *szExePath, const char *szCoreCLRPath, BOOL fStayInPAL);
 typedef HMODULE (*LoadLibraryA)(LPCSTR lpLibFileName);
 typedef void *(*GetProcAddress) (HMODULE hModule, LPCSTR lpProcName);
+typedef HRESULT (*CreateVersionStringFromModule)(DWORD pidDebuggee, LPCWSTR szModuleName, LPWSTR pBuffer, DWORD cchBuffer, DWORD* pdwLength);
+typedef HRESULT (*CreateDebuggingInterfaceFromVersion)(LPCWSTR szDebuggeeVersion, IUnknown ** ppCordb);
 
 void *load_pal()
 {
@@ -77,6 +79,7 @@ void *load_pal()
 }
 
 
+
 int main(int argc, const char **args)
 {
     printf("Hi, I'm a process %d\n", getpid());
@@ -85,61 +88,56 @@ int main(int argc, const char **args)
     LoadLibraryA loadLibraryA = (LoadLibraryA)dlsym(palLib, "LoadLibraryA");
     GetProcAddress getProcAddress = (GetProcAddress)dlsym(palLib, "GetProcAddress");
 
-    HMODULE dbi_lib = loadLibraryA("libmscordbi.so");
+    HMODULE shim_lib = loadLibraryA("libdbgshim.so");
 
-    CreateCordbObject createCordbObject = (CreateCordbObject)getProcAddress(dbi_lib, "CreateCordbObject");
-    if (createCordbObject == nullptr) 
+    CreateVersionStringFromModule createVersionStringFromModule = (CreateVersionStringFromModule)getProcAddress(shim_lib, "CreateVersionStringFromModule");
+    if (createVersionStringFromModule == nullptr)
     {
-        printf("createCordbObject == nullptr\n");
+        printf("createVersionStringFromModule == nullptr\n");
         return 1;
     }
-    else
+    CreateDebuggingInterfaceFromVersion createDebuggingInterfaceFromVersion = (CreateDebuggingInterfaceFromVersion)getProcAddress(shim_lib, "CreateDebuggingInterfaceFromVersion");
+    if (createDebuggingInterfaceFromVersion == nullptr)
     {
-        printf("createCordbObject=%p\n", createCordbObject);
+        printf("createDebuggingInterfaceFromVersion == nullptr\n");
+        return 1;
     }    
 
-    ICorDebug *pCordb;
-    HRESULT hr = createCordbObject(3, &pCordb);
+    if (argc < 1) 
+    {
+        printf("No pid has been given in arguments\n");
+        return 1;
+    }    
 
-    printf("Cordebug created hr=%X pCordb=%p\n", (int)hr, pCordb);
+    int pid = atoi(args[1]);
+    printf("Attaching to pid %d\n", pid);
+
+    WCHAR verStr[1000];
+    DWORD verLen;
+    HRESULT hr = createVersionStringFromModule(pid, u"libcoreclr.so", verStr, sizeof(verStr)/sizeof(verStr[0]), &verLen);
+    printf("CreateVersionStringFromModule hr=%X\n", (int)hr);
+
+    ICorDebug *pCordb = nullptr;
+    hr = createDebuggingInterfaceFromVersion(verStr, (IUnknown **)&pCordb);
+    printf("CreateVersionStringFromModule hr=%X pCordb=%p\n", (int)hr, pCordb);    
+
+    if (hr != 0 || pCordb == nullptr)
+    {
+        printf("Can't create ICorDebug!\n");
+        return 1;
+    }
 
     hr = pCordb->Initialize();
     printf("Cordebug initialized hr=%X\n", (int)hr);
 
     ManagedCallback *callback = new ManagedCallback();
     hr = pCordb->SetManagedHandler(callback);
-    printf("SetManagedHandler hr=%X\n", (int)hr);
+    printf("SetManagedHandler hr=%X\n", (int)hr);    
 
     ICorDebugProcess *process = nullptr;
-    if (argc > 1) 
-    {
-        int pid = atoi(args[1]);
-        printf("Attaching to pid %d\n", pid);
-        hr = pCordb->DebugActiveProcess((DWORD)pid, FALSE, &process);
-        printf("DebugActiveProcess hr=%X\n", (int)hr);
-    }
-    else 
-    {
-        STARTUPINFOW si = {0};
-        si.cb = sizeof(si);
-        si.dwFlags = 0;
-
-        PROCESS_INFORMATION pi = {0};
-        hr = pCordb->CreateProcess( 
-                 NULL,
-                 (LPWSTR)u"/home/eugene/projects/coreclr/bin/Product/Linux.x64.Debug/corerun Hello.exe",
-                 NULL,
-                 NULL,
-                 FALSE,
-                 0,
-                 NULL,
-                 NULL,
-                 &si,
-                 &pi,
-                 DEBUG_NO_SPECIAL_OPTIONS,
-                 &process);
-        printf("CreateProcess hr=%X\n", (int)hr);
-    }
+    printf("Attaching to pid %d\n", pid);
+    hr = pCordb->DebugActiveProcess((DWORD)pid, FALSE, &process);
+    printf("DebugActiveProcess hr=%X\n", (int)hr);
 
     printf("<press any key>");
     getchar();
