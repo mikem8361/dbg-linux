@@ -30,7 +30,12 @@ char *to_ascii(char16_t *src)
 #include "managed_callback.h"
 
 
+extern "C" int PAL_InitializeDLL();
+extern "C" HMODULE LoadLibraryA(LPCSTR lpLibFileName);
+extern "C" void *GetProcAddress (HMODULE hModule, LPCSTR lpProcName);
 
+
+#ifdef EXTERNAL_PAL
 #define DLL_PROCESS_ATTACH 1
 typedef HRESULT (*CreateCordbObject)(int iDebuggerVersion, ICorDebug **ppCordb);
 typedef BOOL (*DllMain)(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved);
@@ -39,13 +44,11 @@ typedef int (*PAL_Initialize)(int argc, const char * const argv[]);
 typedef int (*PAL_InitializeCoreCLR)(const char *szExePath, const char *szCoreCLRPath, BOOL fStayInPAL);
 typedef HMODULE (*LoadLibraryA)(LPCSTR lpLibFileName);
 typedef void *(*GetProcAddress) (HMODULE hModule, LPCSTR lpProcName);
-typedef HRESULT (*CreateVersionStringFromModule)(DWORD pidDebuggee, LPCWSTR szModuleName, LPWSTR pBuffer, DWORD cchBuffer, DWORD* pdwLength);
-typedef HRESULT (*CreateDebuggingInterfaceFromVersion)(LPCWSTR szDebuggeeVersion, IUnknown ** ppCordb);
 
 void *load_pal()
 {
-    const char *name = "libcoreclrpal.so";
-    void *lib = dlopen(name, RTLD_LAZY | RTLD_GLOBAL);
+    const char *name = "libmscordaccore.so";
+    void *lib = dlopen(name, RTLD_LAZY);
     if (lib == nullptr) 
     {
         printf("Can't load library %s\n", name);
@@ -53,40 +56,41 @@ void *load_pal()
     }
 
     PAL_InitializeDLL palInitDll = (PAL_InitializeDLL)dlsym(lib, "PAL_InitializeDLL");
-    PAL_Initialize palInit = (PAL_Initialize)dlsym(lib, "PAL_Initialize");
-    PAL_InitializeCoreCLR palInitCoreClr = (PAL_InitializeCoreCLR)dlsym(lib, "PAL_InitializeCoreCLR");
-    if (palInit == nullptr) 
+
+    if (palInitDll == nullptr) 
     {
         printf("Can't find PAL_Initialize in library %s\n", name);
         return nullptr;
     }
 
-    int palInitResult = palInit(0, 0);
+    int palInitResult = palInitDll();
     if (palInitResult != 0)
     {
         printf("PAL_Initialize returned error %d\n", palInitResult);
         return nullptr;        
     }
 
-    /*
-    if (palInitCoreClr("dbg", "/home/eugene/projects/coreclr/bin/Product/Linux.x64.Debug/libcoreclr.so", TRUE) == 0) 
-    {
-        printf("Can't find PAL_InitializeCoreCLR in library %s\n", name);
-        return nullptr;
-    }*/
-
+    
     return lib;   
 }
+#endif
 
-
+typedef HRESULT (*CreateVersionStringFromModule)(DWORD pidDebuggee, LPCWSTR szModuleName, LPWSTR pBuffer, DWORD cchBuffer, DWORD* pdwLength);
+typedef HRESULT (*CreateDebuggingInterfaceFromVersion)(LPCWSTR szDebuggeeVersion, IUnknown ** ppCordb);
 
 int main(int argc, const char **args)
 {
     printf("Hi, I'm a process %d\n", getpid());
 
+#ifdef EXTERNAL_PAL
     void *palLib = load_pal();
-    LoadLibraryA loadLibraryA = (LoadLibraryA)dlsym(palLib, "LoadLibraryA");
-    GetProcAddress getProcAddress = (GetProcAddress)dlsym(palLib, "GetProcAddress");
+    auto loadLibraryA = (LoadLibraryA)dlsym(palLib, "LoadLibraryA");
+    auto getProcAddress = (GetProcAddress)dlsym(palLib, "GetProcAddress");
+#else
+    PAL_InitializeDLL();
+    auto getProcAddress = GetProcAddress;
+    auto loadLibraryA = LoadLibraryA;
+#endif    
 
     HMODULE shim_lib = loadLibraryA("libdbgshim.so");
 
