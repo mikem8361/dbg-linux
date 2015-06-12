@@ -75,6 +75,8 @@ void *load_pal()
 }
 #endif
 
+typedef HRESULT (*EnumerateCLRs)(DWORD debuggeePID, HANDLE** ppHandleArrayOut, LPWSTR** ppStringArrayOut, DWORD* pdwArrayLengthOut);
+typedef HRESULT (*CloseCLREnumeration)(HANDLE* pHandleArray, LPWSTR* pStringArray, DWORD dwArrayLength);
 typedef HRESULT (*CreateVersionStringFromModule)(DWORD pidDebuggee, LPCWSTR szModuleName, LPWSTR pBuffer, DWORD cchBuffer, DWORD* pdwLength);
 typedef HRESULT (*CreateDebuggingInterfaceFromVersion)(LPCWSTR szDebuggeeVersion, IUnknown ** ppCordb);
 
@@ -94,6 +96,18 @@ int main(int argc, const char **args)
 
     HMODULE shim_lib = loadLibraryA("libdbgshim.so");
 
+    EnumerateCLRs enumerateCLRs = (EnumerateCLRs)getProcAddress(shim_lib, "EnumerateCLRs");
+    if (enumerateCLRs == nullptr)
+    {
+        printf("enumerateCLRs == nullptr\n");
+        return 1;
+    }
+    CloseCLREnumeration closeCLREnumeration = (CloseCLREnumeration)getProcAddress(shim_lib, "CloseCLREnumeration");
+    if (closeCLREnumeration == nullptr)
+    {
+        printf("closeCLREnumeration == nullptr\n");
+        return 1;
+    }
     CreateVersionStringFromModule createVersionStringFromModule = (CreateVersionStringFromModule)getProcAddress(shim_lib, "CreateVersionStringFromModule");
     if (createVersionStringFromModule == nullptr)
     {
@@ -116,14 +130,30 @@ int main(int argc, const char **args)
     int pid = atoi(args[1]);
     printf("Attaching to pid %d\n", pid);
 
+    HANDLE *handleArray;
+    LPWSTR *stringArray;
+    DWORD arrayLength;
+    HRESULT hr = enumerateCLRs(pid, &handleArray, &stringArray, &arrayLength);
+    if (hr != 0 || arrayLength <= 0)
+    {
+        printf("EnumerateCLRs FAILED hr=%X arrayLength=%d\n", (int)hr, arrayLength);
+        return 1;
+    }
+
     WCHAR verStr[1000];
     DWORD verLen;
-    HRESULT hr = createVersionStringFromModule(pid, u"libcoreclr.so", verStr, sizeof(verStr)/sizeof(verStr[0]), &verLen);
-    printf("CreateVersionStringFromModule hr=%X\n", (int)hr);
+    hr = createVersionStringFromModule(pid, stringArray[0], verStr, sizeof(verStr)/sizeof(verStr[0]), &verLen);
+    if (hr != 0)
+    {
+        printf("CreateVersionStringFromModule FAILED hr=%X\n", (int)hr);
+        return 1;
+    }
 
     ICorDebug *pCordb = nullptr;
     hr = createDebuggingInterfaceFromVersion(verStr, (IUnknown **)&pCordb);
-    printf("CreateVersionStringFromModule hr=%X pCordb=%p\n", (int)hr, pCordb);    
+    printf("CreateVersionStringFromModule hr=%X pCordb=%p\n", (int)hr, pCordb);
+
+    closeCLREnumeration(handleArray, stringArray, arrayLength);
 
     if (hr != 0 || pCordb == nullptr)
     {
