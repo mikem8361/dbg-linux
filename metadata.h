@@ -155,7 +155,7 @@ void enum_types(ICorDebugModule *module)
                 }
                 else 
                 {
-                    printf("\tCreate breakpoint %s FAILED %08x\n", to_ascii(name), hr);
+                    printf("\tCreate breakpoint %s FAILED %08x\n", (char *)name, hr);
                 }
             }
         }
