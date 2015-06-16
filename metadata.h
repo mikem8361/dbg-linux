@@ -146,13 +146,18 @@ void enum_types(ICorDebugModule *module)
                 printf("\tBreakpoint being created\n");
                 ICorDebugFunction *mainFunc = NULL;
                 module->GetFunctionFromToken(methodTokens[j], &mainFunc);
-                ICorDebugFunctionBreakpoint *bp = NULL;
-                mainFunc->CreateBreakpoint(&bp);
-                bp->Activate(TRUE);
 
+                ICorDebugFunctionBreakpoint *bp = NULL;
+                HRESULT hr = mainFunc->CreateBreakpoint(&bp);
+                if (hr == 0)
+                {
+                    bp->Activate(TRUE);
+                }
+                else 
+                {
+                    printf("\tCreate breakpoint %s FAILED %08x\n", (char *)name, hr);
+                }
             }
         }
-
-
     }
 }
