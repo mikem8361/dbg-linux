@@ -1,3 +1,4 @@
+#define PAL_STDCPP_COMPAT
 #include <stdio.h>
 #include <dlfcn.h>
 #include <sys/types.h>

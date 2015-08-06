@@ -4,7 +4,7 @@
 //
 
 
-
+#define PAL_STDCPP_COMPAT
 #include <string.h>
 
 #include "no_sal2.h"

@@ -18,7 +18,7 @@ class Class
     public void Method3()
     {
         Console.WriteLine("M3");
-        //throw new Exception("Say: 'Hi, Exception!'");
+        throw new Exception("Say: 'Hi, Exception!'");
         string s = null;
         s.GetHashCode();
     }
