@@ -93,6 +93,21 @@ void print_callstack(ICorDebugThread *thread)
     }
 }
 
+
+void print_all_callstakcs(ICorDebugController *controller)
+{
+    ICorDebugThreadEnum *threadsEnum;
+    controller->EnumerateThreads(&threadsEnum);
+    ICorDebugThread *threads[100];
+    ULONG count;
+    threadsEnum->Next(100, threads, &count);
+    for (int i = 0; i < count; i++) 
+    {
+        printf("Thread #%d\n", i);
+        print_callstack(threads[i]);
+    }
+}
+
 void enum_types(ICorDebugModule *module)
 {
     auto metadata = get_metadata(module);

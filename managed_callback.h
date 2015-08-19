@@ -99,7 +99,8 @@ public:
         /* [in] */ BOOL unhandled)    
     {
         PrintWhereIAm(); 
-        print_callstack(pThread);
+        //print_callstack(pThread);
+        print_all_callstakcs(m_pProcess);
         pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
