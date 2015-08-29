@@ -1,4 +1,3 @@
-#define PAL_STDCPP_COMPAT
 #include <stdio.h>
 #include <dlfcn.h>
 #include <sys/types.h>
@@ -13,6 +12,22 @@
 #include "unknwn.h"
 #include "cor.h"
 #include "cordebug.h"
+
+// Platform-specific library naming
+// 
+#ifdef __APPLE__
+#define MAKEDLLNAME_W(name) u"lib" name u".dylib"
+#define MAKEDLLNAME_A(name)  "lib" name  ".dylib"
+#elif defined(_AIX)
+#define MAKEDLLNAME_W(name) L"lib" name L".a"
+#define MAKEDLLNAME_A(name)  "lib" name  ".a"
+#elif defined(__hppa__) || defined(_IA64_)
+#define MAKEDLLNAME_W(name) L"lib" name L".sl"
+#define MAKEDLLNAME_A(name)  "lib" name  ".sl"
+#else
+#define MAKEDLLNAME_W(name) u"lib" name u".so"
+#define MAKEDLLNAME_A(name)  "lib" name  ".so"
+#endif
 
 char *to_ascii(char16_t *src)
 {
@@ -48,7 +63,7 @@ typedef void *(*GetProcAddress) (HMODULE hModule, LPCSTR lpProcName);
 
 void *load_pal()
 {
-    const char *name = "libmscordaccore.so";
+    const char *name = MAKEDLLNAME_A("mscordaccore");
     void *lib = dlopen(name, RTLD_LAZY);
     if (lib == nullptr) 
     {
@@ -95,7 +110,7 @@ int main(int argc, const char **args)
     auto loadLibraryA = LoadLibraryA;
 #endif    
 
-    HMODULE shim_lib = loadLibraryA("libdbgshim.so");
+    HMODULE shim_lib = loadLibraryA(MAKEDLLNAME_A("dbgshim"));
 
     EnumerateCLRs enumerateCLRs = (EnumerateCLRs)getProcAddress(shim_lib, "EnumerateCLRs");
     if (enumerateCLRs == nullptr)
@@ -129,7 +144,7 @@ int main(int argc, const char **args)
     }    
 
     int pid = atoi(args[1]);
-    printf("Attaching to pid %d\n", pid);
+    printf("Enumerating CLRs in process %d\n", pid);
 
     HANDLE *handleArray;
     LPWSTR *stringArray;
