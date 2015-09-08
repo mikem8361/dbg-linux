@@ -192,5 +192,17 @@ int main(int argc, const char **args)
     printf("<press any key>");
     getchar();
 
+    hr = process->Stop(0);
+    printf("Stop hr=%X\n", (int)hr);
+
+    hr = process->Detach();
+    printf("Detach hr=%X\n", (int)hr);
+
+    hr = pCordb->Terminate();
+    printf("Cordebug Terminate hr=%X\n", (int)hr);
+
+    printf("<press any key>");
+    getchar();
+
     return 0;
 }
