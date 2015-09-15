@@ -65,10 +65,14 @@ public:
         ICorDebugFunctionBreakpoint *fbp = NULL;
         pBreakpoint->QueryInterface(IID_ICorDebugFunctionBreakpoint, (void**)&fbp);
         ICorDebugFunction *function = NULL;
-        fbp->GetFunction(&function);
-        printf("Breakpoint at \n");
-        print_callstack(pThread);
-
+        int hr = fbp->GetFunction(&function);
+        if (function == NULL || pThread == NULL) {
+	    printf("Breakpoint notification %x NULL function %p or pThread %p", hr, function, pThread);
+        }
+	else {
+            printf("Breakpoint at \n");
+       	    print_callstack(pThread);
+	}
         pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
@@ -99,7 +103,7 @@ public:
         /* [in] */ BOOL unhandled)    
     {
         PrintWhereIAm(); 
-        //print_callstack(pThread);
+        printf("unhandled %s\n", unhandled ? "true" : "false");
         print_all_callstakcs(m_pProcess);
         pAppDomain->Continue(FALSE); 
         return S_OK; 

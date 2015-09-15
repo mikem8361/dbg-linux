@@ -1,20 +1,24 @@
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#ifdef FEATURE_PAL
 #include <dlfcn.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include "no_sal2.h"
-#include "pal_char16.h"
-#include "pal_mstypes.h"
-#include "rpc.h"
-#include "rt/ntimage.h"
-#include "unknwn.h"
-#include "cor.h"
-#include "cordebug.h"
+#include <no_sal2.h>
+#include <pal_char16.h>
+#include <pal_mstypes.h>
+#include <rpc.h>
+#include <rt/ntimage.h>
+#endif
+#include <rpc.h>
+#include <unknwn.h>
+#include <cor.h>
+#include <cordebug.h>
 
 // Platform-specific library naming
 // 
+#ifdef FEATURE_PAL
 #ifdef __APPLE__
 #define MAKEDLLNAME_W(name) u"lib" name u".dylib"
 #define MAKEDLLNAME_A(name)  "lib" name  ".dylib"
@@ -28,8 +32,12 @@
 #define MAKEDLLNAME_W(name) u"lib" name u".so"
 #define MAKEDLLNAME_A(name)  "lib" name  ".so"
 #endif
+#else // FEATURE_PAL
+#define MAKEDLLNAME_W(name) name L".dll"
+#define MAKEDLLNAME_A(name) name ".dll"
+#endif
 
-char *to_ascii(char16_t *src)
+char *to_ascii(WCHAR *src)
 {
     char *result = (char *)src;
     char *dst = result;
@@ -41,15 +49,14 @@ char *to_ascii(char16_t *src)
     return result;
 }
 
-
 #include "metadata.h"
 #include "managed_callback.h"
 
+#ifdef FEATURE_PAL
 
 extern "C" int PAL_InitializeDLL();
 extern "C" HMODULE LoadLibraryA(LPCSTR lpLibFileName);
 extern "C" void *GetProcAddress (HMODULE hModule, LPCSTR lpProcName);
-
 
 #ifdef EXTERNAL_PAL
 #define DLL_PROCESS_ATTACH 1
@@ -91,6 +98,8 @@ void *load_pal()
 }
 #endif
 
+#endif // FEATURE_PAL
+
 typedef HRESULT (*EnumerateCLRs)(DWORD debuggeePID, HANDLE** ppHandleArrayOut, LPWSTR** ppStringArrayOut, DWORD* pdwArrayLengthOut);
 typedef HRESULT (*CloseCLREnumeration)(HANDLE* pHandleArray, LPWSTR* pStringArray, DWORD dwArrayLength);
 typedef HRESULT (*CreateVersionStringFromModule)(DWORD pidDebuggee, LPCWSTR szModuleName, LPWSTR pBuffer, DWORD cchBuffer, DWORD* pdwLength);
@@ -98,19 +107,33 @@ typedef HRESULT (*CreateDebuggingInterfaceFromVersion)(LPCWSTR szDebuggeeVersion
 
 int main(int argc, const char **args)
 {
+#ifdef FEATURE_PAL
     printf("Hi, I'm a process %d\n", getpid());
+#endif
 
 #ifdef EXTERNAL_PAL
     void *palLib = load_pal();
     auto loadLibraryA = (LoadLibraryA)dlsym(palLib, "LoadLibraryA");
     auto getProcAddress = (GetProcAddress)dlsym(palLib, "GetProcAddress");
 #else
+#ifdef FEATURE_PAL
     PAL_InitializeDLL();
+#endif
     auto getProcAddress = GetProcAddress;
     auto loadLibraryA = LoadLibraryA;
 #endif    
-
-    HMODULE shim_lib = loadLibraryA(MAKEDLLNAME_A("dbgshim"));
+    const char *shimName = MAKEDLLNAME_A("dbgshim");
+    HMODULE shim_lib = loadLibraryA(shimName);
+    if (shim_lib == nullptr)
+    {
+#ifdef FEATURE_PAL
+        printf("%s not found", shimName);
+#else
+        int error = GetLastError();
+        printf("%s not found 0x%04x", shimName, error);
+#endif
+        return 1;
+    }
 
     EnumerateCLRs enumerateCLRs = (EnumerateCLRs)getProcAddress(shim_lib, "EnumerateCLRs");
     if (enumerateCLRs == nullptr)
@@ -194,6 +217,37 @@ int main(int argc, const char **args)
 
     hr = process->Stop(0);
     printf("Stop hr=%X\n", (int)hr);
+
+    ICorDebugAppDomainEnum *domainEnum;
+    hr = process->EnumerateAppDomains(&domainEnum);
+    printf("EnumerateAppDomains hr=%X\n", (int)hr);
+
+    ICorDebugAppDomain *domains[2];
+    ULONG nDomains = 0;
+    hr = domainEnum->Next(2, domains, &nDomains);
+    printf("Next hr=%X\n", (int)hr);
+
+    for (int i = 0; i < nDomains; i++) {
+        ICorDebugBreakpointEnum *bpEnum;
+        hr = domains[i]->EnumerateBreakpoints(&bpEnum);
+        printf("EnumerateBreakpoints hr=%X\n", (int)hr);
+
+        while (TRUE) {
+            ICorDebugBreakpoint *bps[200];
+            ULONG nBps = 0;
+            hr = bpEnum->Next(200, bps, &nBps);
+            printf("Next hr=%X\n", (int)hr);
+
+            if (nBps == 0) {
+                break;
+            }
+
+            for (int b = 0; b < nBps; b++) {
+                hr = bps[b]->Activate(FALSE);
+                printf("bp Activate(FALSE) hr=%X\n", (int)hr);
+            }
+        }
+    }
 
     hr = process->Detach();
     printf("Detach hr=%X\n", (int)hr);
