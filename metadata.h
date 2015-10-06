@@ -1,9 +1,14 @@
+#define ASSERTX(expr) { if (!(expr)) { printf("ASSERT FAILED %d\n", __LINE__); } }
+
 IMetaDataImport2 *get_metadata(ICorDebugModule *module)
 {
     IUnknown *unkMetadata;
-    IMetaDataImport2 *metadata;
     module->GetMetaDataInterface(IID_IMetaDataImport2, (IUnknown **)&unkMetadata);
+    ASSERTX(unkMetadata != nullptr);
+
+    IMetaDataImport2 *metadata;
     unkMetadata->QueryInterface(IID_IMetaDataImport2, (void**)&metadata);
+    ASSERTX(metadata != nullptr);
 
     return metadata;    
 }
@@ -73,9 +78,17 @@ void print_function(ICorDebugFunction *func)
 void print_callstack(ICorDebugThread *thread)
 {
     ICorDebugChain *chain = NULL;
-    thread->GetActiveChain(&chain);
+    int hr = thread->GetActiveChain(&chain);
+    if (chain == nullptr) {
+        printf("thread->GetActiveChain failed %08x\n", hr);
+        return;
+    }
     ICorDebugFrameEnum *frameEnum = NULL;
-    chain->EnumerateFrames(&frameEnum);
+    hr = chain->EnumerateFrames(&frameEnum);
+    if (frameEnum == nullptr) {
+        printf("chain->EnumerateFrames failed %08x\n", hr);
+        return;
+    }
     ICorDebugFrame *frames[100];
     ULONG frameCount = 0;
     frameEnum->Next(sizeof(frames)/sizeof(frames[0]),
@@ -97,7 +110,11 @@ void print_callstack(ICorDebugThread *thread)
 void print_all_callstakcs(ICorDebugController *controller)
 {
     ICorDebugThreadEnum *threadsEnum;
-    controller->EnumerateThreads(&threadsEnum);
+    int hr = controller->EnumerateThreads(&threadsEnum);
+    if (threadsEnum == nullptr) {
+        printf("controller->EnumerateThreads failed %08x\n", hr);
+        return;
+    }
     ICorDebugThread *threads[100];
     ULONG count;
     threadsEnum->Next(100, threads, &count);
@@ -168,10 +185,6 @@ void enum_types(ICorDebugModule *module)
                 {
                     hr = bp->Activate(TRUE);
                     printf("\tActivate(TRUE) breakpoint %08x\n", hr);
-
-                    hr = bp->Activate(FALSE);
-                    printf("\tActivate(FALSE) breakpoint %08x\n", hr);
-
                 }
                 else 
                 {

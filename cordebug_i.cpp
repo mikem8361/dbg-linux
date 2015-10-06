@@ -5,9 +5,10 @@
 
 
 #include <string.h>
-
+#ifdef FEATURE_PAL
 #include "no_sal2.h"
 #include "pal_mstypes.h"
+#endif
 #include "rpc.h"
 #include "rpcndr.h"
 
