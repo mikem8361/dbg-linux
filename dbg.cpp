@@ -218,39 +218,42 @@ int main(int argc, const char **args)
     hr = process->Stop(0);
     printf("Stop hr=%X\n", (int)hr);
 
-    ICorDebugAppDomainEnum *domainEnum;
-    hr = process->EnumerateAppDomains(&domainEnum);
-    printf("EnumerateAppDomains hr=%X\n", (int)hr);
+    if (hr == 0) 
+    {
+	ICorDebugAppDomainEnum *domainEnum;
+	hr = process->EnumerateAppDomains(&domainEnum);
+	printf("EnumerateAppDomains hr=%X\n", (int)hr);
 
-    ICorDebugAppDomain *domains[2];
-    ULONG nDomains = 0;
-    hr = domainEnum->Next(2, domains, &nDomains);
-    printf("Next hr=%X\n", (int)hr);
+	ICorDebugAppDomain *domains[2];
+	ULONG nDomains = 0;
+	hr = domainEnum->Next(2, domains, &nDomains);
+	printf("Next hr=%X\n", (int)hr);
 
-    for (int i = 0; i < nDomains; i++) {
-        ICorDebugBreakpointEnum *bpEnum;
-        hr = domains[i]->EnumerateBreakpoints(&bpEnum);
-        printf("EnumerateBreakpoints hr=%X\n", (int)hr);
+	for (int i = 0; i < nDomains; i++) {
+	    ICorDebugBreakpointEnum *bpEnum;
+	    hr = domains[i]->EnumerateBreakpoints(&bpEnum);
+	    printf("EnumerateBreakpoints hr=%X\n", (int)hr);
 
-        while (TRUE) {
-            ICorDebugBreakpoint *bps[200];
-            ULONG nBps = 0;
-            hr = bpEnum->Next(200, bps, &nBps);
-            printf("Next hr=%X\n", (int)hr);
+	    while (TRUE) {
+		ICorDebugBreakpoint *bps[200];
+		ULONG nBps = 0;
+		hr = bpEnum->Next(200, bps, &nBps);
+		printf("Next hr=%X\n", (int)hr);
 
-            if (nBps == 0) {
-                break;
-            }
+		if (nBps == 0) {
+		    break;
+		}
 
-            for (int b = 0; b < nBps; b++) {
-                hr = bps[b]->Activate(FALSE);
-                printf("bp Activate(FALSE) hr=%X\n", (int)hr);
-            }
-        }
+		for (int b = 0; b < nBps; b++) {
+		    hr = bps[b]->Activate(FALSE);
+		    printf("bp Activate(FALSE) hr=%X\n", (int)hr);
+		}
+	    }
+	}
+
+	hr = process->Detach();
+	printf("Detach hr=%X\n", (int)hr);
     }
-
-    hr = process->Detach();
-    printf("Detach hr=%X\n", (int)hr);
 
     hr = pCordb->Terminate();
     printf("Cordebug Terminate hr=%X\n", (int)hr);

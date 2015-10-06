@@ -1,4 +1,8 @@
-export CORECLR_SRC=$HOME/coreclr/src
+if [ $CoreClrRoot = "" ]; then
+    export CORECLR_SRC=~/coreclr/src
+else
+    export CORECLR_SRC=$CoreClrRoot/src
+fi
 mkdir bin > /dev/null 2>&1
 
 OSName=$(uname -s)

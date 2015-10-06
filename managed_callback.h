@@ -62,6 +62,8 @@ public:
         /* [in] */ ICorDebugThread *pThread,
         /* [in] */ ICorDebugBreakpoint *pBreakpoint)
     {
+	static int bpsHit = 0;
+
         ICorDebugFunctionBreakpoint *fbp = NULL;
         pBreakpoint->QueryInterface(IID_ICorDebugFunctionBreakpoint, (void**)&fbp);
         ICorDebugFunction *function = NULL;
@@ -73,6 +75,12 @@ public:
             printf("Breakpoint at \n");
        	    print_callstack(pThread);
 	}
+
+	if (++bpsHit > 100)
+        {
+	    pBreakpoint->Activate(FALSE);
+            printf("Deactivating BP after %d hits\n", bpsHit);
+        }
         pAppDomain->Continue(FALSE); 
         return S_OK; 
     }
