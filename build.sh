@@ -31,7 +31,7 @@ esac
 
 if [ $__BuildOS = "Linux" ]; then
 
-    clang++-3.5 -DPAL_IMPLEMENTATION -DFEATURE_PAL -D__LINUX__ -DPLATFORM_UNIX -DPAL_STDCPP_COMPAT -I./inc -I$CORECLR_SRC/inc -I$CORECLR_SRC/pal/inc -I$CORECLR_SRC/pal/inc/rt -pthread -std=c++11 -g dbg.cpp cordebug_i.cpp -o bin/dbg -L$CORECLR_SRC/../bin/Product/Linux.x64.Debug/lib -ldl -lunwind-x86_64 -lunwind-generic -lunwind-ptrace -lunwind -lpalrt -lcoreclrpal 
+    clang++-3.5 -DPAL_IMPLEMENTATION -DFEATURE_PAL -D__LINUX__ -DPLATFORM_UNIX -DPAL_STDCPP_COMPAT -I./inc -I$CORECLR_SRC/inc -I$CORECLR_SRC/pal/inc -I$CORECLR_SRC/pal/inc/rt -pthread -std=c++11 -g dbg.cpp cordebug_i.cpp -o bin/dbg -L$CORECLR_SRC/../bin/Product/Linux.x64.Debug/lib -ldl -lunwind-x86_64 -lunwind-generic -lunwind-ptrace -lunwind -luuid -lpalrt -lcoreclrpal
 
 elif [ $__BuildOS = "OSX" ]; then
 
