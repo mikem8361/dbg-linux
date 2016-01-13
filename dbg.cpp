@@ -81,7 +81,8 @@ typedef struct _STARTUPINFOA {
     HANDLE hStdError;
 } STARTUPINFOA, *LPSTARTUPINFOA;
 
-#define CREATE_SUSPENDED                  0x00000004
+#define CREATE_SUSPENDED           0x00000004
+#define STARTF_USESTDHANDLES       0x00000100
 
 extern "C" BOOL CreateProcessA(
     LPCSTR lpApplicationName,
@@ -148,7 +149,7 @@ typedef HRESULT (*CreateDebuggingInterfaceFromVersion)(LPCWSTR szDebuggeeVersion
 ICorDebugProcess *g_process = nullptr;
 ICorDebug *g_pCordb = nullptr;
 UnregisterForRuntimeStartup g_unregisterForRuntimeStartup = nullptr;
-PVOID g_pUnregisterToken = nullptr;
+PVOID g_punregisterToken = nullptr;
 bool g_unregisterInCallback = false;
 
 void RuntimeStartupHandler(IUnknown *punk, PVOID parameter, HRESULT hr)
@@ -177,10 +178,10 @@ void RuntimeStartupHandler(IUnknown *punk, PVOID parameter, HRESULT hr)
         printf("RuntimeStartupHandler FAILED hr=%08x\n", (int)hr);
     }
 
-    if (g_unregisterInCallback)
+    if (g_unregisterInCallback && g_punregisterToken != nullptr)
     {
-	hr = g_unregisterForRuntimeStartup(g_pUnregisterToken);
-	printf("UnregisterForRuntimeStartup hr=%08x token %p\n", (int)hr, g_pUnregisterToken);
+	hr = g_unregisterForRuntimeStartup(g_punregisterToken);
+	printf("UnregisterForRuntimeStartup hr=%08x token %p\n", (int)hr, g_punregisterToken);
     }
 }
 
@@ -255,6 +256,7 @@ int main(int argc, const char **args)
 
     bool newApi = true;
     bool launch = true;
+    bool registerCallback = true;
     HRESULT hr = 0;
     int pid = 0;
 
@@ -270,6 +272,10 @@ int main(int argc, const char **args)
 	    {
                 g_unregisterInCallback = true;
 	    }
+            else if (strcmp(args[i], "-launchonly") == 0)
+            {
+                registerCallback = false;
+            }
 	    else 
 	    { 
 		launch = false;
@@ -301,7 +307,6 @@ int main(int argc, const char **args)
 #else
             #define PROGRAM_NAME "corerun Hello.exe"
 #endif
-	    printf("Launching %s\n", PROGRAM_NAME);
             BOOL result = CreateProcessA(NULL, (LPSTR)PROGRAM_NAME, NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, NULL, &startupInfo, &processInfo);
             if (!result)
             {
@@ -310,15 +315,25 @@ int main(int argc, const char **args)
             }
 
             pid = processInfo.dwProcessId;
+
+	    printf("CreateProcessA(%s) SUCCEEDED pid %d\n", PROGRAM_NAME, pid);
         }
 
-        printf("RegisterForRuntimeStartup for process %d\n", pid);
+        if (registerCallback)
+	{
+	    printf("RegisterForRuntimeStartup for process %d\n", pid);
 
-        hr = registerForRuntimeStartup(pid, RuntimeStartupHandler, (PVOID)(intptr_t)pid, &g_pUnregisterToken);
-        if (hr != 0)
+	    hr = registerForRuntimeStartup(pid, RuntimeStartupHandler, (PVOID)(intptr_t)pid, &g_punregisterToken);
+	    if (hr != 0)
+	    {
+		printf("RegisterForRuntimeStartup FAILED hr=%08x\n", (int)hr);
+		return 1;
+	    }
+        }
+        else
         {
-            printf("RegisterForRuntimeStartup FAILED hr=%08x\n", (int)hr);
-            return 1;
+	    printf("<press any key>");
+	    getchar();
         }
         
         if (launch)
@@ -379,10 +394,10 @@ int main(int argc, const char **args)
     printf("<press any key>");
     getchar();
 
-    if (!g_unregisterInCallback)
+    if (!g_unregisterInCallback && g_punregisterToken != nullptr)
     {
-	hr = g_unregisterForRuntimeStartup(g_pUnregisterToken);
-	printf("UnregisterForRuntimeStartup hr=%08x token %p\n", (int)hr, g_pUnregisterToken);
+	hr = g_unregisterForRuntimeStartup(g_punregisterToken);
+	printf("UnregisterForRuntimeStartup hr=%08x token %p\n", (int)hr, g_punregisterToken);
     }
 
     if (g_process != nullptr)
