@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <no_sal2.h>
+#include <mbusafecrt.h>
 #include <pal_char16.h>
 #include <pal_mstypes.h>
 #include <rpc.h>
@@ -15,6 +16,12 @@
 #include <unknwn.h>
 #include <cor.h>
 #include <cordebug.h>
+
+#ifdef WINDOWS
+#define W(str)  L##str
+#else
+#define W(str)  u##str
+#endif
 
 // Platform-specific library naming
 // 
@@ -58,43 +65,6 @@ extern "C" int PAL_InitializeDLL();
 extern "C" HMODULE LoadLibraryA(LPCSTR lpLibFileName);
 extern "C" void *GetProcAddress (HMODULE hModule, LPCSTR lpProcName);
 extern "C" DWORD GetLastError(VOID);
-extern "C" DWORD ResumeThread(HANDLE hThread);
-
-typedef struct _STARTUPINFOA {
-    DWORD cb;
-    LPSTR lpReserved;
-    LPSTR lpDesktop;
-    LPSTR lpTitle;
-    DWORD dwX;
-    DWORD dwY;
-    DWORD dwXSize;
-    DWORD dwYSize;
-    DWORD dwXCountChars;
-    DWORD dwYCountChars;
-    DWORD dwFillAttribute;
-    DWORD dwFlags;
-    WORD wShowWindow;
-    WORD cbReserved2;
-    LPBYTE lpReserved2;
-    HANDLE hStdInput;
-    HANDLE hStdOutput;
-    HANDLE hStdError;
-} STARTUPINFOA, *LPSTARTUPINFOA;
-
-#define CREATE_SUSPENDED           0x00000004
-#define STARTF_USESTDHANDLES       0x00000100
-
-extern "C" BOOL CreateProcessA(
-    LPCSTR lpApplicationName,
-    LPSTR lpCommandLine,
-    LPSECURITY_ATTRIBUTES lpProcessAttributes,
-    LPSECURITY_ATTRIBUTES lpThreadAttributes,
-    BOOL bInheritHandles,
-    DWORD dwCreationFlags,
-    LPVOID lpEnvironment,
-    LPCSTR lpCurrentDirectory,
-    LPSTARTUPINFOA lpStartupInfo,
-    LPPROCESS_INFORMATION lpProcessInformation);
 
 #ifdef EXTERNAL_PAL
 #define DLL_PROCESS_ATTACH 1
@@ -140,6 +110,9 @@ void *load_pal()
 typedef VOID (*PSTARTUP_CALLBACK)(IUnknown *pCordb, PVOID parameter, HRESULT hr);
 typedef HRESULT (*RegisterForRuntimeStartup)(DWORD dwProcessId, PSTARTUP_CALLBACK pfnCallback, PVOID parameter, PVOID *ppUnregisterToken);
 typedef HRESULT (*UnregisterForRuntimeStartup)(PVOID pUnregisterToken);
+typedef BOOL (*CreateProcessForLaunch) (LPWSTR lpCommandLine, BOOL bSuspendProcess, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory, PDWORD pProcessId, HANDLE *pResumeHandle);
+typedef DWORD (*ResumeProcess) (HANDLE hResumeHandle);
+typedef DWORD (*CloseResumeHandle) (HANDLE hResumeHandle);
 
 typedef HRESULT (*EnumerateCLRs)(DWORD debuggeePID, HANDLE** ppHandleArrayOut, LPWSTR** ppStringArrayOut, DWORD* pdwArrayLengthOut);
 typedef HRESULT (*CloseCLREnumeration)(HANDLE* pHandleArray, LPWSTR* pStringArray, DWORD dwArrayLength);
@@ -229,6 +202,27 @@ int main(int argc, const char **args)
         return 1;
     }
 
+    CreateProcessForLaunch createProcessForLaunch = (CreateProcessForLaunch)getProcAddress(shim_lib, "CreateProcessForLaunch");
+    if (createProcessForLaunch == nullptr)
+    {
+        printf("CreateProcessForLaunch not found\n");
+        return 1;
+    }
+
+    ResumeProcess resumeProcess = (ResumeProcess)getProcAddress(shim_lib, "ResumeProcess");
+    if (resumeProcess == nullptr)
+    {
+        printf("ResumeProcess not found\n");
+        return 1;
+    }
+
+    CloseResumeHandle closeResumeHandle = (CloseResumeHandle)getProcAddress(shim_lib, "CloseResumeHandle");
+    if (closeResumeHandle == nullptr)
+    {
+        printf("CloseResumeHandle not found\n");
+        return 1;
+    }
+
     EnumerateCLRs enumerateCLRs = (EnumerateCLRs)getProcAddress(shim_lib, "EnumerateCLRs");
     if (enumerateCLRs == nullptr)
     {
@@ -286,37 +280,28 @@ int main(int argc, const char **args)
 
     if (newApi) 
     {
-        PROCESS_INFORMATION processInfo;
+        HANDLE resumeHandle;
 
         if (launch)
         {
-            STARTUPINFOA startupInfo;
-        
-            startupInfo.cb = sizeof(startupInfo);
-            startupInfo.lpReserved = NULL;
-            startupInfo.lpDesktop = NULL;
-            startupInfo.lpTitle = NULL;
-            startupInfo.dwFlags = 0;
-            startupInfo.cbReserved2 = 0;
-            startupInfo.lpReserved2 = NULL;
-            startupInfo.hStdError = NULL;
-            startupInfo.hStdInput = NULL;
-            startupInfo.hStdOutput = NULL;
 #ifdef WINDOWS
-            #define PROGRAM_NAME "corerun.exe Hello.exe"
+            #define PROGRAM_COMMAND_LINE_A "corerun.exe Hello.exe"
+            #define PROGRAM_COMMAND_LINE_W W("corerun.exe Hello.exe")
 #else
-            #define PROGRAM_NAME "corerun Hello.exe"
+            #define PROGRAM_COMMAND_LINE_A "corerun Hello.exe"
+            #define PROGRAM_COMMAND_LINE_W W("corerun Hello.exe")
 #endif
-            BOOL result = CreateProcessA(NULL, (LPSTR)PROGRAM_NAME, NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, NULL, &startupInfo, &processInfo);
+            WCHAR commandLine[256];
+            wcscpy_s(commandLine, sizeof(commandLine), PROGRAM_COMMAND_LINE_W);
+
+            BOOL result = createProcessForLaunch(commandLine, TRUE, NULL, NULL, (PDWORD)&pid, &resumeHandle);
             if (!result)
             {
-                printf("CreateProcessA(%s) FAILED %d\n", PROGRAM_NAME, GetLastError());
+                printf("CreateProcessForLaunch(%s) FAILED %d\n", PROGRAM_COMMAND_LINE_A, GetLastError());
                 return 1;
             }
 
-            pid = processInfo.dwProcessId;
-
-	    printf("CreateProcessA(%s) SUCCEEDED pid %d\n", PROGRAM_NAME, pid);
+	    printf("CreateProcessForLaunch(%s) SUCCEEDED pid %d\n", PROGRAM_COMMAND_LINE_A, pid);
         }
 
         if (registerCallback)
@@ -338,11 +323,17 @@ int main(int argc, const char **args)
         
         if (launch)
         {
-	    printf("ResumeThread for pid %d\n", pid);
+	    printf("ResumeProcess for pid %d\n", pid);
 
-            if (ResumeThread(processInfo.hThread) == (DWORD)-1)
+            if (resumeProcess(resumeHandle) == (DWORD)-1)
             {
-                printf("ResumeThread FAILED %d\n", GetLastError());
+                printf("ResumeProcess FAILED %d\n", GetLastError());
+                return 1;
+            }
+
+            if (closeResumeHandle(resumeHandle) == (DWORD)-1)
+            {
+                printf("CloseResumeHandle FAILED %d\n", GetLastError());
                 return 1;
             }
         }
