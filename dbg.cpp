@@ -110,9 +110,9 @@ void *load_pal()
 typedef VOID (*PSTARTUP_CALLBACK)(IUnknown *pCordb, PVOID parameter, HRESULT hr);
 typedef HRESULT (*RegisterForRuntimeStartup)(DWORD dwProcessId, PSTARTUP_CALLBACK pfnCallback, PVOID parameter, PVOID *ppUnregisterToken);
 typedef HRESULT (*UnregisterForRuntimeStartup)(PVOID pUnregisterToken);
-typedef BOOL (*CreateProcessForLaunch) (LPWSTR lpCommandLine, BOOL bSuspendProcess, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory, PDWORD pProcessId, HANDLE *pResumeHandle);
-typedef DWORD (*ResumeProcess) (HANDLE hResumeHandle);
-typedef DWORD (*CloseResumeHandle) (HANDLE hResumeHandle);
+typedef HRESULT (*CreateProcessForLaunch) (LPWSTR lpCommandLine, BOOL bSuspendProcess, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory, PDWORD pProcessId, HANDLE *pResumeHandle);
+typedef HRESULT (*ResumeProcess) (HANDLE hResumeHandle);
+typedef HRESULT (*CloseResumeHandle) (HANDLE hResumeHandle);
 
 typedef HRESULT (*EnumerateCLRs)(DWORD debuggeePID, HANDLE** ppHandleArrayOut, LPWSTR** ppStringArrayOut, DWORD* pdwArrayLengthOut);
 typedef HRESULT (*CloseCLREnumeration)(HANDLE* pHandleArray, LPWSTR* pStringArray, DWORD dwArrayLength);
@@ -294,10 +294,10 @@ int main(int argc, const char **args)
             WCHAR commandLine[256];
             wcscpy_s(commandLine, sizeof(commandLine), PROGRAM_COMMAND_LINE_W);
 
-            BOOL result = createProcessForLaunch(commandLine, TRUE, NULL, NULL, (PDWORD)&pid, &resumeHandle);
-            if (!result)
+            hr = createProcessForLaunch(commandLine, TRUE, NULL, NULL, (PDWORD)&pid, &resumeHandle);
+            if (hr != 0)
             {
-                printf("CreateProcessForLaunch(%s) FAILED %d\n", PROGRAM_COMMAND_LINE_A, GetLastError());
+                printf("CreateProcessForLaunch(%s) FAILED hr=%08x\n", PROGRAM_COMMAND_LINE_A, (int)hr);
                 return 1;
             }
 
@@ -325,15 +325,17 @@ int main(int argc, const char **args)
         {
 	    printf("ResumeProcess for pid %d\n", pid);
 
-            if (resumeProcess(resumeHandle) == (DWORD)-1)
+            hr = resumeProcess(resumeHandle);
+	    if (hr != 0)
             {
-                printf("ResumeProcess FAILED %d\n", GetLastError());
+                printf("ResumeProcess FAILED hr=%08x\n", (int)hr);
                 return 1;
             }
 
-            if (closeResumeHandle(resumeHandle) == (DWORD)-1)
+            hr = closeResumeHandle(resumeHandle);
+	    if (hr != 0)
             {
-                printf("CloseResumeHandle FAILED %d\n", GetLastError());
+                printf("CloseResumeHandle FAILED hr=%08x\n", (int)hr);
                 return 1;
             }
         }
