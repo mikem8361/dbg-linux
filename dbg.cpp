@@ -6,9 +6,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <no_sal2.h>
-#include <mbusafecrt.h>
 #include <pal_char16.h>
 #include <pal_mstypes.h>
+#include <mbusafecrt.h>
 #include <rpc.h>
 #include <rt/ntimage.h>
 #endif
