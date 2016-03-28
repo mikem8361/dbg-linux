@@ -146,10 +146,12 @@ void RuntimeStartupHandler(IUnknown *punk, PVOID parameter, HRESULT hr)
         hr = g_pCordb->DebugActiveProcess((DWORD)pid, FALSE, &g_process);
         printf("DebugActiveProcess hr=%08x\n", (int)hr);
 
-        BYTE buffer[32];
-        SIZE_T read;
-	hr = g_process->ReadMemory(0x7000000000000000, 16, buffer, &read);
-        printf("ReadMemory(0x7000000000000000) hr=%08x\n", (int)hr);
+	if (g_process != nullptr) {
+	    BYTE buffer[32];
+	    SIZE_T read;
+	    hr = g_process->ReadMemory(0x7000000000000000, 16, buffer, &read);
+	    printf("ReadMemory(0x7000000000000000) hr=%08x\n", (int)hr);
+	}
     }
     else
     {
